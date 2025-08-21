@@ -1,0 +1,7 @@
+CREATE DATABASE petstore;
+CREATE TABLE pet (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  weight DECIMAL(5,2),
+  type VARCHAR(50)
+);
