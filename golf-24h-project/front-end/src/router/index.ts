@@ -1,12 +1,9 @@
 import { createRouter, createWebHistory } from "vue-router";
-import CalendarView from "../pages/calendar-view.vue";
-import BookingForm from "../pages/booking-form.vue";
-import BookingLookup from "../pages/booking-lookup.vue";
+import HomePage from "../pages/HomePage.vue";
 
 const routes = [
-  { path: "/", component: CalendarView },
-  { path: "/booking", component: BookingForm },
-  { path: "/lookup", component: BookingLookup },
+  { path: "/", component: HomePage },
+  { path: "/:pathMatch(.*)*", redirect: "/" }
 ];
 
 const router = createRouter({
