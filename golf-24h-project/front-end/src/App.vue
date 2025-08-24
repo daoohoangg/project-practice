@@ -1,30 +1,8 @@
-<template>
-  <div id="app">
-    <router-view />
-  </div>
-</template>
+<script setup>
+import { ref, onMounted } from 'vue'
+import { supabase } from './lib/supabaseClient'
 
-<script setup lang="ts">
-// App component - main entry point
 </script>
 
-<style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: 'Microsoft JhengHei', 'PingFang TC', 'Helvetica Neue', Arial, sans-serif;
-  line-height: 1.6;
-  color: #333;
-  background-color: #f8f9fa;
-}
-
-#app {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-</style>
+<template>
+</template>

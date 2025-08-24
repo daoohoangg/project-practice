@@ -17,7 +17,7 @@
 
 <style scoped>
 .header {
-  background: linear-gradient(135deg, #2c5530 0%, #4a7c59 100%);
+  background: white;
   color: white;
   padding: 1rem 0;
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
@@ -38,7 +38,7 @@
 .logo {
   font-size: 2rem;
   font-weight: bold;
-  color: #fff;
+  color: #e87220;
 }
 
 .nav {
@@ -47,7 +47,7 @@
 }
 
 .nav-link {
-  color: white;
+  color: black;
   text-decoration: none;
   font-weight: 500;
   transition: color 0.3s ease;
