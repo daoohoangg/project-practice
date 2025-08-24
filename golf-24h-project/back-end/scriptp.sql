@@ -8,7 +8,7 @@ CREATE DATABASE golf_booking;
 -- =====================================
 --  Customers Table
 -- =====================================
-CREATE TABLE customers (
+CREATE TABLE customer (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) NOT NULL,
     phone VARCHAR(20) NOT NULL,
@@ -22,7 +22,7 @@ CREATE UNIQUE INDEX idx_customers_phone ON customers(phone);
 -- =====================================
 --  Timeslots Table
 -- =====================================
-CREATE TABLE timeslots (
+CREATE TABLE time_slot (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     date DATE NOT NULL,
     start_time TIME NOT NULL,
@@ -41,7 +41,7 @@ CREATE UNIQUE INDEX uniq_timeslot_per_day
 -- =====================================
 --  Bookings Table
 -- =====================================
-CREATE TABLE bookings (
+CREATE TABLE booking (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
     timeslot_id UUID NOT NULL REFERENCES timeslots(id) ON DELETE CASCADE,
@@ -59,27 +59,27 @@ CREATE UNIQUE INDEX uniq_timeslot_booking
 --  Seed Data
 -- =====================================
 -- Customers
-INSERT INTO customers (name, phone, email)
+INSERT INTO customer (name, phone, email)
 VALUES 
   ('Nguyen Van A', '0900000001', 'a@example.com'),
   ('Tran Thi B', '0900000002', 'b@example.com');
 
 -- Timeslots 
-INSERT INTO timeslots (date, start_time, end_time, status)
+INSERT INTO time_slot (date, start_time, end_time, status)
 VALUES
   (CURRENT_DATE, '08:00', '09:00', 'available'),
   (CURRENT_DATE, '09:00', '10:00', 'available'),
   (CURRENT_DATE, '10:00', '11:00', 'blocked'); 
 
 -- Booking: Nguyen Van A booking slot 8:00
-INSERT INTO bookings (customer_id, timeslot_id, status)
+INSERT INTO booking (customer_id, timeslot_id, status)
 VALUES (
-  (SELECT id FROM customers WHERE phone = '0900000001'),
-  (SELECT id FROM timeslots WHERE date = CURRENT_DATE AND start_time = '08:00'),
+  (SELECT id FROM customer WHERE phone = '0900000001'),
+  (SELECT id FROM time_slot WHERE date = CURRENT_DATE AND start_time = '08:00'),
   'confirmed'
 );
 
 -- Update status timeslot
-UPDATE timeslots
+UPDATE time_slot
 SET status = 'booked'
 WHERE date = CURRENT_DATE AND start_time = '08:00';

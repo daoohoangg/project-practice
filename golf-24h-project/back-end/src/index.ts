@@ -18,3 +18,4 @@ AppDataSource.initialize().then(() => {
     console.log("Server running on http://localhost:3000");
   });
 });
+console.log("DB URL:", process.env.DATABASE_URL);
