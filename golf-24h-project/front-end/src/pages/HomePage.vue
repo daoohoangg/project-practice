@@ -5,7 +5,7 @@
     <main class="main-content">
       <HeroSection @booking="handleBooking" />
       <BookingStatus @day-click="handleDayClick" />
-      <BookingSpace @email-click="handleEmailClick" @phone-click="handlePhoneClick" />
+      <!-- <BookingSpace @email-click="handleEmailClick" @phone-click="handlePhoneClick" /> -->
       <ActivityList @activity-click="handleActivityClick" />
     </main>
     
@@ -17,7 +17,6 @@
 import Header from '../components/Header.vue'
 import HeroSection from '../components/HeroSection.vue'
 import BookingStatus from '../components/BookingStatus.vue'
-import BookingSpace from '../components/BookingSpace.vue'
 import ActivityList from '../components/ActivityList.vue'
 import Footer from '../components/Footer.vue'
 
@@ -59,12 +58,11 @@ const handleActivityClick = (activity: Activity) => {
 
 .main-content {
   flex: 1;
-  max-width: 1200px;
+  max-width: 100%;
   margin: 0 auto;
   padding: 2rem;
 }
 
-/* Responsive Design */
 @media (max-width: 768px) {
   .main-content {
     padding: 1rem;

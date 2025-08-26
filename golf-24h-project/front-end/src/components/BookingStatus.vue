@@ -1,221 +1,272 @@
 <template>
-  <section id="booking-status" class="section">
-    <h3 class="section-title">預定狀況</h3>
-    <div class="calendar-container">
-      <div class="calendar-header">
-        <h4>{{ currentMonth }}</h4>
-      </div>
-      <div class="calendar-grid">
-        <div class="calendar-day" 
-             v-for="day in calendarDays" 
-             :key="day.date" 
-             :class="{ 'booked': day.booked, 'available': !day.booked }"
-             @click="handleDayClick(day)">
-          {{ day.day }}
+  <div class="booking-container">
+    <!-- City filter -->
+    <div class="city-filter">
+      <button
+        v-for="city in cities"
+        :key="city"
+        :class="['city-btn', { active: selectedCity === city }]"
+        @click="changeCity(city)"
+      >
+        {{ city }}
+      </button>
+    </div>
+
+    <div class="calendar-wrapper">
+      <!-- Calendar -->
+      <div class="calendar">
+        <div class="calendar-header">
+          <button @click="prevMonth">‹</button>
+          <span>{{ currentYear }} 年 {{ currentMonth + 1 }} 月</span>
+          <button @click="nextMonth">›</button>
+        </div>
+
+        <div class="calendar-grid">
+          <div class="day-name" v-for="d in weekDays" :key="d">{{ d }}</div>
+          <div
+            v-for="(day, index) in daysInMonth"
+            :key="index"
+            :class="[
+              'day',
+              { 
+                today: isToday(day.date),
+                selected: isSelected(day.date),
+                booked: isBooked(day.date),
+                disabled: isPast(day.date)
+              }
+            ]"
+            @click="!isPast(day.date) && selectDate(day.date)"
+          >
+            {{ day.label }}
+            <div v-if="isBooked(day.date)" class="underline"></div>
+          </div>
         </div>
       </div>
-      <div class="calendar-legend">
-        <div class="legend-item">
-          <span class="legend-color booked"></span>
-          <span>已被預約時間</span>
-        </div>
-        <div class="legend-item">
-          <span class="legend-color available"></span>
-          <span>目前沒有預約</span>
-        </div>
+
+      <!-- Reservation Info -->
+      <div class="reservation">
+        <h3>{{ selectedCity }} 預約資訊</h3>
+        <p v-if="!selectedDate">請選擇日期</p>
+        <p v-else-if="bookedTimes.length === 0">目前沒有預約</p>
+        <ul>
+          <li v-for="time in bookedTimes" :key="time">{{ time }}</li>
+        </ul>
       </div>
     </div>
-  </section>
+  </div>
 </template>
 
-<script setup lang="ts">
-import { ref, computed } from 'vue'
+<script setup>
+import { ref, computed } from "vue";
 
-import type { CalendarDay } from '../types/components'
+const API_BASE = "http://localhost:3000"; 
 
-const props = defineProps<{
-  month?: string
-  year?: number
-}>()
+const cities = ["全部城市", "台北", "新北", "新竹", "苗栗", "台中", "彰化", "高雄", "台東"];
+const selectedCity = ref("全部城市");
 
-const emit = defineEmits<{
-  dayClick: [day: CalendarDay]
-}>()
+const today = new Date();
+today.setHours(0,0,0,0);
+const currentYear = ref(today.getFullYear());
+const currentMonth = ref(today.getMonth());
+const selectedDate = ref(null);
 
-const currentMonth = computed(() => props.month || '2025 年 08 月')
+const weekDays = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
 
-const calendarDays = ref<CalendarDay[]>([
-  { day: 27, date: '2025-08-27', booked: false },
-  { day: 28, date: '2025-08-28', booked: true },
-  { day: 29, date: '2025-08-29', booked: false },
-  { day: 30, date: '2025-08-30', booked: true },
-  { day: 31, date: '2025-08-31', booked: false },
-  { day: 1, date: '2025-09-01', booked: false },
-  { day: 2, date: '2025-09-02', booked: true },
-  { day: 3, date: '2025-09-03', booked: false },
-  { day: 4, date: '2025-09-04', booked: false },
-  { day: 5, date: '2025-09-05', booked: true },
-  { day: 6, date: '2025-09-06', booked: false },
-  { day: 7, date: '2025-09-07', booked: false },
-  { day: 8, date: '2025-09-08', booked: false },
-  { day: 9, date: '2025-09-09', booked: true },
-  { day: 10, date: '2025-09-10', booked: false },
-  { day: 11, date: '2025-09-11', booked: false },
-  { day: 12, date: '2025-09-12', booked: true },
-  { day: 13, date: '2025-09-13', booked: false },
-  { day: 14, date: '2025-09-14', booked: false },
-  { day: 15, date: '2025-09-15', booked: false },
-  { day: 16, date: '2025-09-16', booked: true },
-  { day: 17, date: '2025-09-17', booked: false },
-  { day: 18, date: '2025-09-18', booked: false },
-  { day: 19, date: '2025-09-19', booked: true },
-  { day: 20, date: '2025-09-20', booked: false },
-  { day: 21, date: '2025-09-21', booked: false },
-  { day: 22, date: '2025-09-22', booked: false },
-  { day: 23, date: '2025-09-23', booked: true },
-  { day: 24, date: '2025-09-24', booked: false },
-  { day: 25, date: '2025-09-25', booked: false },
-  { day: 26, date: '2025-09-26', booked: true },
-  { day: 27, date: '2025-09-27', booked: false },
-  { day: 28, date: '2025-09-28', booked: false },
-  { day: 29, date: '2025-09-29', booked: false },
-  { day: 30, date: '2025-09-30', booked: true },
-  { day: 1, date: '2025-10-01', booked: false },
-  { day: 2, date: '2025-10-02', booked: false },
-  { day: 3, date: '2025-10-03', booked: true },
-  { day: 4, date: '2025-10-04', booked: false },
-  { day: 5, date: '2025-10-05', booked: false },
-  { day: 6, date: '2025-10-06', booked: false }
-])
+const bookedDates = ref([]);  
+const bookedTimes = ref([]);  
 
-const handleDayClick = (day: CalendarDay) => {
-  emit('dayClick', day)
+const daysInMonth = computed(() => {
+  const days = [];
+  const firstDay = new Date(currentYear.value, currentMonth.value, 1).getDay();
+  const totalDays = new Date(currentYear.value, currentMonth.value + 1, 0).getDate();
+
+  for (let i = 0; i < firstDay; i++) {
+    days.push({ label: "", date: null });
+  }
+  for (let d = 1; d <= totalDays; d++) {
+    days.push({ label: d, date: new Date(currentYear.value, currentMonth.value, d) });
+  }
+  return days;
+});
+
+function selectDate(date) {
+  if (!date) return;
+  selectedDate.value = date;
+  fetchDayBookings();
 }
+
+function isToday(date) {
+  if (!date) return false;
+  return date.toDateString() === today.toDateString();
+}
+
+function isSelected(date) {
+  if (!date || !selectedDate.value) return false;
+  return date.toDateString() === selectedDate.value.toDateString();
+}
+
+function isPast(date) {
+  if (!date) return false;
+  return date < today;
+}
+
+function prevMonth() {
+  if (currentMonth.value === 0) {
+    currentMonth.value = 11;
+    currentYear.value--;
+  } else {
+    currentMonth.value--;
+  }
+  fetchBookedDays();
+}
+
+function nextMonth() {
+  if (currentMonth.value === 11) {
+    currentMonth.value = 0;
+    currentYear.value++;
+  } else {
+    currentMonth.value++;
+  }
+  fetchBookedDays();
+}
+
+function changeCity(city) {
+  selectedCity.value = city;
+  fetchBookedDays();
+}
+
+
+async function fetchBookedDays() {
+  if (!selectedCity.value) return;
+  try {
+    const res = await fetch(
+      `${API_BASE}/bookings?city=${encodeURIComponent(selectedCity.value)}&year=${currentYear.value}&month=${currentMonth.value + 1}`
+    );
+    bookedDates.value = await res.json(); // ví dụ trả về [25, 27, 28, 30]
+  } catch (err) {
+    console.error("fetchBookedDays error:", err);
+    bookedDates.value = [];
+  }
+}
+
+
+async function fetchDayBookings() {
+  if (!selectedDate.value || !selectedCity.value) return;
+  try {
+    const y = selectedDate.value.getFullYear();
+    const m = selectedDate.value.getMonth() + 1;
+    const d = selectedDate.value.getDate();
+    const dateStr = `${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    const res = await fetch(
+      `${API_BASE}/bookings/day?city=${encodeURIComponent(selectedCity.value)}&date=${dateStr}`
+    );
+    bookedTimes.value = await res.json(); 
+  } catch (err) {
+    console.error("fetchDayBookings error:", err);
+    bookedTimes.value = [];
+  }
+}
+
+function isBooked(date) {
+  if (!date) return false;
+  return bookedDates.value.includes(date.getDate());
+}
+
+
+fetchBookedDays();
 </script>
 
+
 <style scoped>
-.section {
-  margin-bottom: 4rem;
-  padding: 2rem;
-  background: white;
-  border-radius: 15px;
-  box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+.booking-container {
+  font-family: "Microsoft JhengHei", sans-serif;
+  padding: 10px;
 }
-
-.section-title {
-  font-size: 2rem;
-  color: #2c5530;
-  margin-bottom: 2rem;
-  text-align: center;
-  position: relative;
+.city-filter {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
 }
-
-.section-title::after {
-  content: '';
-  position: absolute;
-  bottom: -10px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 60px;
-  height: 3px;
-  background: linear-gradient(45deg, #4a7c59, #6b9c7a);
-  border-radius: 2px;
+.city-btn {
+  border: none;
+  padding: 8px 14px;
+  border-radius: 20px;
+  background: #f7c8a0;
+  cursor: pointer;
 }
-
-.calendar-container {
-  max-width: 800px;
-  margin: 0 auto;
+.city-btn.active {
+  background: #f58220;
+  color: white;
 }
-
+.calendar-wrapper {
+  display: flex;
+  gap: 20px;
+}
+.calendar {
+  flex: 1;
+  background: #fff;
+  border-radius: 8px;
+  padding: 10px;
+  border: 1px solid #eee;
+}
 .calendar-header {
-  text-align: center;
-  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+  margin-bottom: 10px;
+  color: #f58220;
 }
-
-.calendar-header h4 {
-  font-size: 1.5rem;
-  color: #2c5530;
-}
-
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 10px;
-  margin-bottom: 2rem;
+  gap: 4px;
 }
-
-.calendar-day {
-  aspect-ratio: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f8f9fa;
-  border: 2px solid #e9ecef;
-  border-radius: 10px;
-  font-weight: bold;
+.day-name {
+  font-size: 14px;
+  text-align: center;
+  color: #888;
+}
+.day {
+  height: 50px;
+  text-align: center;
   cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.calendar-day:hover {
-  transform: scale(1.05);
-  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-}
-
-.calendar-day.booked {
-  background: #ff6b6b;
-  color: white;
-  border-color: #ff6b6b;
-}
-
-.calendar-day.available {
-  background: #a8e6cf;
-  color: #2c5530;
-  border-color: #a8e6cf;
-}
-
-.calendar-legend {
-  display: flex;
-  justify-content: center;
-  gap: 2rem;
-  flex-wrap: wrap;
-}
-
-.legend-item {
+  border-radius: 6px;
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-weight: 500;
+  justify-content: center;
 }
-
-.legend-color {
-  width: 20px;
-  height: 20px;
-  border-radius: 5px;
+.day.today {
+  border: 1px solid #f58220;
 }
-
-.legend-color.booked {
-  background: #ff6b6b;
+.day.selected {
+  background: #f58220;
+  color: white;
 }
-
-.legend-color.available {
-  background: #a8e6cf;
+.day.booked .underline {
+  position: absolute;
+  bottom: 4px;
+  left: 25%;
+  right: 25%;
+  height: 2px;
+  background: #f58220;
+  border-radius: 2px;
 }
-
-/* Responsive Design */
-@media (max-width: 768px) {
-  .calendar-grid {
-    gap: 5px;
-  }
-  
-  .calendar-day {
-    font-size: 0.9rem;
-  }
+.day.disabled {
+  color: #ccc;
+  pointer-events: none;
+  cursor: not-allowed;
 }
-
-@media (max-width: 480px) {
-  .section {
-    padding: 1rem;
-  }
+.reservation {
+  flex: 1;
+  background: #fff;
+  border-radius: 8px;
+  padding: 15px;
+  border: 1px solid #eee;
+}
+.reservation h3 {
+  margin-bottom: 10px;
+  color: #f58220;
 }
 </style>

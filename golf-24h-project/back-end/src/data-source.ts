@@ -1,9 +1,9 @@
 import "reflect-metadata";
 import { DataSource } from "typeorm";
-import { Customer } from "./entity/Customer";
 import { Booking } from "./entity/Booking"; 
 import { TimeSlot } from "./entity/TimeSlot";
-
+import { City } from "./entity/City";
+import { Stadium } from "./entity/Stadium";
 // export const AppDataSource = new DataSource({
 //   type: "postgres",
 //   host: "localhost",
@@ -25,10 +25,12 @@ const isSSL = process.env.DB_SSL === 'true' || (process.env.DATABASE_URL && proc
 export const AppDataSource = new DataSource({
   type: "postgres",
   url: process.env.DATABASE_URL, 
-  entities: [Customer, Booking, TimeSlot],
-  synchronize: process.env.NODE_ENV !== "production",  // auto create table (only developer)
+  entities: [Booking, TimeSlot, City, Stadium],
+  synchronize: process.env.NODE_ENV !== "production",
   logging: true,
-  ...(isSSL ? { ssl: { rejectUnauthorized: false } } : {}),
+  ssl: {
+    rejectUnauthorized: false, 
+  },
   schema: "public",
 });
 

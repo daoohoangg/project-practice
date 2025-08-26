@@ -7,10 +7,6 @@
           <p>專業的VR高爾夫體驗中心</p>
         </div>
         <div class="footer-section">
-          <h4>營業時間</h4>
-          <p>週一至週日: 09:00 - 22:00</p>
-        </div>
-        <div class="footer-section">
           <h4>聯絡方式</h4>
           <p>mak66design@gmail.com</p>
           <p>(02)7755-0832</p>
@@ -29,7 +25,7 @@
 
 <style scoped>
 .footer {
-  background: #2c5530;
+  background: #434343;
   color: white;
   padding: 3rem 0 2rem;
   margin-top: auto;
@@ -49,7 +45,7 @@
 }
 
 .footer-section h4 {
-  color: #a8e6cf;
+  color: #e87220;
   margin-bottom: 1rem;
   font-size: 1.2rem;
 }
@@ -61,13 +57,13 @@
 }
 
 .footer-bottom {
-  border-top: 1px solid #4a7c59;
+  border-top: 1px solid #e87220;
   padding-top: 2rem;
   text-align: center;
 }
 
 .footer-bottom p {
-  color: #a8e6cf;
+  color: #a9a9a9;
   font-size: 0.9rem;
 }
 

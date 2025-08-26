@@ -5,7 +5,6 @@
       <nav class="nav">
         <a href="#booking-status" class="nav-link">預定狀況</a>
         <a href="#booking-space" class="nav-link">預約空間</a>
-        <a href="#activity-list" class="nav-link">活動列表</a>
       </nav>
     </div>
   </header>
@@ -27,7 +26,7 @@
 }
 
 .header-content {
-  max-width: 1200px;
+  max-width: 100%;
   margin: 0 auto;
   padding: 0 2rem;
   display: flex;
@@ -56,7 +55,7 @@
 }
 
 .nav-link:hover {
-  color: #a8e6cf;
+  color: #e87220;
   background-color: rgba(255,255,255,0.1);
 }
 

@@ -55,6 +55,37 @@ CREATE UNIQUE INDEX uniq_timeslot_booking
     ON bookings(timeslot_id)
     WHERE status = 'confirmed';
 
+CREATE TABLE area (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(100) NOT NULL,         
+    location VARCHAR(255),               
+    description TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX idx_area_name ON area(name);
+CREATE TABLE stadium (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    area_id UUID NOT NULL REFERENCES area(id) ON DELETE CASCADE, 
+    name VARCHAR(100) NOT NULL,         
+    capacity INT,
+    surface_type VARCHAR(50),           
+    price_per_hour NUMERIC(10,2),   
+    description TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+
+CREATE UNIQUE INDEX uniq_stadium_per_area 
+    ON stadium(area_id, name);
+
+ALTER TABLE time_slot
+    ADD COLUMN stadium_id UUID NOT NULL REFERENCES stadium(id) ON DELETE CASCADE;
+
+
+CREATE INDEX idx_timeslot_stadium_date 
+    ON time_slot(stadium_id, date);
+
 -- =====================================
 --  Seed Data
 -- =====================================
