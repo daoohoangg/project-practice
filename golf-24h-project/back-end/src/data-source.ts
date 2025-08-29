@@ -1,7 +1,6 @@
 import "reflect-metadata";
 import { DataSource } from "typeorm";
 import { Booking } from "./entity/Booking"; 
-import { TimeSlot } from "./entity/TimeSlot";
 import { City } from "./entity/City";
 import { Stadium } from "./entity/Stadium";
 // export const AppDataSource = new DataSource({
@@ -25,7 +24,7 @@ const isSSL = process.env.DB_SSL === 'true' || (process.env.DATABASE_URL && proc
 export const AppDataSource = new DataSource({
   type: "postgres",
   url: process.env.DATABASE_URL, 
-  entities: [Booking, TimeSlot, City, Stadium],
+  entities: [Booking, City, Stadium],
   synchronize: process.env.NODE_ENV !== "production",
   logging: true,
   ssl: {

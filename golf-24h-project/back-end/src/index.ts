@@ -1,15 +1,19 @@
 import "reflect-metadata";
 import express from "express";
+import cors from "cors";
 import { AppDataSource } from "./data-source";
-import timeslotRoutes from "./routers/timeslot-router";
-import areaRoutes from "./routers/area-router";
+import cityRoutes from "./routers/city-router";
+import bookingRoutes from "./routers/booking-router";
+import stadiumRoutes from "./routers/stadium-router";
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
 // Routes
-app.use("/timeslots", timeslotRoutes);
-app.use("/areas", areaRoutes);
+app.use("/cities", cityRoutes);
+app.use("/bookings", bookingRoutes);
+app.use("/stadiums", stadiumRoutes);
 
 AppDataSource.initialize().then(() => {
   app.listen(3000, () => {

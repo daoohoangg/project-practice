@@ -1,8 +1,9 @@
+// Stadium.ts
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany } from "typeorm";
 import { City } from "./City";
-import { TimeSlot } from "./TimeSlot";
+import { Booking } from "./Booking";
 
-@Entity({ name: "stadium" })
+@Entity()
 export class Stadium {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
@@ -10,18 +11,25 @@ export class Stadium {
   @Column({ length: 100 })
   name!: string;
 
-  @Column({ length: 200 })
-  img!: string;
+  @Column("text", { nullable: true })
+  description?: string;
 
-  @Column({ length: 200 })
-  description!: string;
+  @Column({ nullable: true })
+  img?: string;
 
-  @Column({ length: 500 })
-  rules!: string;
-
+  @Column("text", { nullable: true })
+  rules?: string;
+  @Column("text", { nullable: true })
+  location?: string;
+  @Column("text", { nullable: true })
+  parking?: string;
+  @Column("text", { nullable: true })
+  availability?: string;
+  @Column("text", { nullable: true })
+  price?: string;
   @ManyToOne(() => City, (city) => city.stadiums, { onDelete: "CASCADE" })
   city!: City;
 
-  @OneToMany(() => TimeSlot, (timeslot) => timeslot.stadium)
-  timeslots!: TimeSlot[];
+  @OneToMany(() => Booking, (booking) => booking.stadium)
+  bookings!: Booking[];
 }

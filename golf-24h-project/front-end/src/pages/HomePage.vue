@@ -17,7 +17,6 @@
 import Header from '../components/Header.vue'
 import HeroSection from '../components/HeroSection.vue'
 import BookingStatus from '../components/BookingStatus.vue'
-import ActivityList from '../components/ActivityList.vue'
 import Footer from '../components/Footer.vue'
 
 // Event handlers

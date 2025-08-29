@@ -1,7 +1,8 @@
+// City.ts
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from "typeorm";
 import { Stadium } from "./Stadium";
 
-@Entity({ name: "city" })
+@Entity()
 export class City {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
