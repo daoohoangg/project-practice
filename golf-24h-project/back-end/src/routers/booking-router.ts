@@ -16,7 +16,7 @@ router.get("/stadium/:stadiumId", async (req, res) => {
     const { date } = req.query as { date?: string };
 
     if (!date) {
-      return res.status(400).json({ error: "Missing required query param: date (YYYY-MM-DD)" });
+      return res.status(400).json({ error: "Date parameter is required (YYYY-MM-DD)" });
     }
 
     // Validate stadium exists
@@ -25,7 +25,6 @@ router.get("/stadium/:stadiumId", async (req, res) => {
       return res.status(404).json({ error: "Stadium not found" });
     }
 
-    // Parse date to start/end of the day in UTC
     const day = new Date(date);
     if (isNaN(day.getTime())) {
       return res.status(400).json({ error: "Invalid date format. Use YYYY-MM-DD" });
@@ -33,24 +32,24 @@ router.get("/stadium/:stadiumId", async (req, res) => {
     const startOfDay = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), 0, 0, 0));
     const endOfDay = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), 23, 59, 59, 999));
 
-    // Find bookings for this stadium and date
     const bookings = await bookingRepo.find({
       where: {
         stadium: { id: stadiumId },
-        startTime: Between(startOfDay, endOfDay),
+        timeDate: Between(startOfDay, endOfDay),
       },
       order: { startTime: "ASC" },
+      relations: ["stadium"],
     });
 
-    // Return stadiumId, startTime, endTime, and timeDate for each booking
-    const times = bookings.map(b => ({
-      stadiumId: stadiumId,
-      startTime: b.startTime,
-      endTime: b.endTime,
-      dateTimeBooked: b.timeDate,
-    }));
+    // Simplified response with only required fields
+    return res.json(
+      bookings.map(booking => ({
+        stadiumId: booking.stadium.id,
+        startTime: booking.startTime,
+        endTime: booking.endTime
+      }))
+    );
 
-    return res.json(times);
   } catch (err) {
     return res.status(500).json({ error: (err as Error).message });
   }
@@ -83,17 +82,90 @@ router.post("/", async (req, res) => {
       return res.status(404).json({ error: "Stadium not found" });
     }
 
+    // Convert times to Date objects
+    const newStartTime = new Date(startTime);
+    const newEndTime = new Date(endTime);
+
+    // Check for overlapping bookings
+    const overlappingBookings = await bookingRepo.find({
+      where: {
+        stadium: { id: stadiumId },
+        startTime: Between(newStartTime, newEndTime),
+      },
+      relations: ["stadium"],
+    });
+
+    // Also check for bookings that started before but end during our new booking
+    const additionalOverlaps = await bookingRepo.find({
+      where: {
+        stadium: { id: stadiumId },
+        endTime: Between(newStartTime, newEndTime),
+      },
+      relations: ["stadium"],
+    });
+
+    const allOverlaps = [...overlappingBookings, ...additionalOverlaps];
+
+    if (allOverlaps.length > 0) {
+      return res.status(409).json({ 
+        error: "This time slot is already booked",
+        conflictingBookings: allOverlaps.map(booking => ({
+          startTime: booking.startTime,
+          endTime: booking.endTime
+        }))
+      });
+    }
+
+    // If no overlaps, create the booking
     const booking = new Booking();
     booking.stadium = stadium;
     booking.timeDate = new Date(dateTimeBooked);
-    booking.startTime = new Date(startTime);
-    booking.endTime = new Date(endTime);
-    booking.status = "PENDING"; // or whatever default status you use
+    booking.startTime = newStartTime;
+    booking.endTime = newEndTime;
+    booking.status = "PENDING";
 
     await bookingRepo.save(booking);
 
     return res.status(201).json(booking);
   } catch (err) {
+    return res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// Get all bookings by stadium ID
+router.get("/stadium-all/:stadiumId", async (req, res) => {
+  try {
+    const { stadiumId } = req.params;
+
+    // Validate stadium exists
+    const stadium = await stadiumRepo.findOne({ where: { id: stadiumId } });
+    if (!stadium) {
+      return res.status(404).json({ error: "Stadium not found" });
+    }
+
+    // Find all bookings for this stadium
+    const bookings = await bookingRepo.find({
+      where: {
+        stadium: { id: stadiumId },
+      },
+      order: { startTime: "ASC" },
+      relations: ["stadium"],
+    });
+
+    return res.json({
+      stadiumId,
+      bookings: bookings.map(booking => ({
+        id: booking.id,
+        stadiumId: booking.stadium.id,
+        startTime: booking.startTime,
+        endTime: booking.endTime,
+        dateTimeBooked: booking.timeDate,
+        status: booking.status
+      }))
+    });
+
+  } catch (err) {
+    console.error('Error:', err);
     return res.status(500).json({ error: (err as Error).message });
   }
 });

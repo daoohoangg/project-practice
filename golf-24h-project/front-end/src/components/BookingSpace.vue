@@ -32,7 +32,7 @@
         </select>
 
         <label>STEP 2 - 預約日期 Date</label>
-        <input type="date" v-model="date" />
+        <DatePicker v-model="value3" size="large" placeholder="" showIcon iconDisplay="input" />
 
         <label>開始時間 Start</label>
         <input type="time" v-model="startTime" />
@@ -104,6 +104,7 @@ import { ref } from "vue";
 import { useStadiumStore } from "../stores/stadiums";
 const stadiumStore = useStadiumStore();
 const stadium = stadiumStore.current || { name: "Golf24 圓山2店" };
+import DatePicker from 'primevue/datepicker';
 
 // Form fields
 const ticketType = ref("平日打擊券");
@@ -244,5 +245,27 @@ async function bookNow() {
 .booked {
   color: red;
   font-weight: bold;
+}
+.p-datepicker {
+  border: 1px solid #b9b9b9;  
+  background-color: #f9fafb;   
+  border-radius: 5px;         
+}
+
+.p-datepicker .p-datepicker-header {
+  background-color: #3b82f6;
+  color: white;
+  border-radius: 2px 2px 0 0;
+}
+
+.p-datepicker td > span:hover {
+  background-color: #dbeafe;
+  border-radius: 2px;
+}
+
+.p-datepicker td.p-highlight > span {
+  background-color: #3b82f6 !important;
+  color: white !important;
+  border-radius: 6px;
 }
 </style>

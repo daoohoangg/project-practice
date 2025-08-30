@@ -9,12 +9,14 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@primeuix/themes": "^1.2.3",
     "axios": "^1.11.0",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^4.19.2",
     "pg": "^8.11.5",
+    "primevue": "^4.3.7",
     "reflect-metadata": "^0.1.13",
     "typeorm": "^0.3.20"
   },
