@@ -14,9 +14,7 @@
       <div class="calendar-section">
         <h2>已預約資訊 Calendar</h2>
         <div class="calendar-box">
-          <!-- fake calendar
-          <p>2025/08/29 已被預約時間</p>
-          <p class="booked">14:00 - 16:00</p> -->
+          <VCalendar title-position="left" />
         </div>
       </div>
 
@@ -32,8 +30,16 @@
         </select>
 
         <label>STEP 2 - 預約日期 Date</label>
-        <DatePicker v-model="value3" size="large" placeholder="" showIcon iconDisplay="input" />
-
+        <DatePicker 
+            v-model="date"
+            :showIcon="true"
+            dateFormat="yy-mm-dd"
+            :minDate="new Date()"
+            placeholder="選擇日期"
+            class="w-full"
+            appendTo="body"
+        />
+        <div style="margin: 30vh 0;"></div>  
         <label>開始時間 Start</label>
         <input type="time" v-model="startTime" />
 
@@ -100,40 +106,100 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { useStadiumStore } from "../stores/stadiums";
 const stadiumStore = useStadiumStore();
 const stadium = stadiumStore.current || { name: "Golf24 圓山2店" };
 import DatePicker from 'primevue/datepicker';
+import VCalendar from 'v-calendar';
 
 // Form fields
 const ticketType = ref("平日打擊券");
-const date = ref("");
+const date = ref(null); // Initialize as null for PrimeVue DatePicker
 const startTime = ref("");
 const endTime = ref("");
 const loading = ref(false);
 
 async function bookNow() {
+  // Validate all required fields
+  if (!stadium.id) {
+    alert("找不到場地ID");
+    return;
+  }
+
   if (!date.value || !startTime.value || !endTime.value) {
     alert("請填寫完整預約資訊");
     return;
   }
+
+  // Check if end time is earlier than start time
+  if (startTime.value >= endTime.value) {
+    alert("結束時間必須晚於開始時間(time start must be later than end time)");
+    return;
+  }
+
   loading.value = true;
   try {
-    const startDateTime = `${date.value}T${startTime.value}:00.000Z`;
-    const endDateTime = `${date.value}T${endTime.value}:00.000Z`;
+    // Format date using local components to avoid timezone shift
+    const y = date.value.getFullYear();
+    const m = String(date.value.getMonth() + 1).padStart(2, '0');
+    const d = String(date.value.getDate()).padStart(2, '0');
+    const formattedDate = `${y}-${m}-${d}`;
+
+    // Build Date objects in local time, then convert to UTC ISO strings
+    const [sh, sm] = startTime.value.split(":").map(Number);
+    const [eh, em] = endTime.value.split(":").map(Number);
+    const startLocal = new Date(y, Number(m) - 1, Number(d), sh, sm, 0, 0);
+    const endLocal = new Date(y, Number(m) - 1, Number(d), eh, em, 0, 0);
+    const startDateTime = startLocal.toISOString();
+    const endDateTime = endLocal.toISOString();
+
+    // Check for time conflicts
+    const response = await fetch(`http://localhost:3000/bookings/stadium/${stadium.id}?date=${formattedDate}`);
+    if (!response.ok) {
+      throw new Error('無法檢查場地預約時間');
+    }
+    
+    const existingBookings = await response.json();
+    const newStartTime = startLocal.getTime();
+    const newEndTime = endLocal.getTime();
+
+    // Check for overlapping bookings
+    const hasConflict = existingBookings.some(booking => {
+      const existingStart = new Date(booking.startTime).getTime();
+      const existingEnd = new Date(booking.endTime).getTime();
+      
+      return (
+        (newStartTime >= existingStart && newStartTime < existingEnd) || // New start time falls within existing booking
+        (newEndTime > existingStart && newEndTime <= existingEnd) || // New end time falls within existing booking
+        (newStartTime <= existingStart && newEndTime >= existingEnd) // New booking completely encompasses existing booking
+      );
+    });
+
+    if (hasConflict) {
+      alert('選擇的時間已被預約，請選擇其他時段(time conflict, please choose another time)');
+      loading.value = false;
+      return;
+    }
+    
+    const bookingData = {
+      stadiumId: stadium.id,
+      dateTimeBooked: new Date().toISOString(),
+      startTime: startDateTime,
+      endTime: endDateTime,
+    };
+
+    // Log the data being sent (for debugging)
+    console.log('Sending booking data:', bookingData);
+
     const res = await fetch("http://localhost:3000/bookings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        stadiumId: stadium.id,
-        dateTimeBooked: new Date().toISOString(),
-        startTime: startDateTime,
-        endTime: endDateTime,
-      })
+      body: JSON.stringify(bookingData)
     });
+    
     if (res.ok) {
-      alert("預約成功！");
+      alert("預約成功！Booking Successfully!");
       // Optionally reset form or redirect
     } else {
       let errMsg = "未知錯誤";
@@ -158,6 +224,7 @@ async function bookNow() {
   max-width: 1000px;
   margin: 0 auto;
 }
+
 .booking-space {
   padding: 20px;
   font-family: Arial, sans-serif;
@@ -242,30 +309,25 @@ async function bookNow() {
   padding: 8px;
   text-align: center;
 }
+
 .booked {
   color: red;
   font-weight: bold;
 }
+
 .p-datepicker {
-  border: 1px solid #b9b9b9;  
-  background-color: #f9fafb;   
-  border-radius: 5px;         
+  width: 100%;
 }
 
-.p-datepicker .p-datepicker-header {
-  background-color: #3b82f6;
-  color: white;
-  border-radius: 2px 2px 0 0;
+:deep(.p-datepicker input) {
+  width: 100%;
+  padding: 5px;
+  border: 1px solid #c3c3c3;
+  border-radius: 10px;
+}
+.p-datepicker,
+.p-datepicker .p-datepicker-panel {
+  background: #fff !important;
 }
 
-.p-datepicker td > span:hover {
-  background-color: #dbeafe;
-  border-radius: 2px;
-}
-
-.p-datepicker td.p-highlight > span {
-  background-color: #3b82f6 !important;
-  color: white !important;
-  border-radius: 6px;
-}
 </style>

@@ -35,7 +35,7 @@ router.get("/stadium/:stadiumId", async (req, res) => {
     const bookings = await bookingRepo.find({
       where: {
         stadium: { id: stadiumId },
-        timeDate: Between(startOfDay, endOfDay),
+        startTime: Between(startOfDay, endOfDay),
       },
       order: { startTime: "ASC" },
       relations: ["stadium"],
@@ -45,11 +45,57 @@ router.get("/stadium/:stadiumId", async (req, res) => {
     return res.json(
       bookings.map(booking => ({
         stadiumId: booking.stadium.id,
+        stadiumName: booking.stadium.name,
         startTime: booking.startTime,
         endTime: booking.endTime
       }))
     );
 
+  } catch (err) {
+    return res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// Get all bookings across stadiums for a given date (optionally filter by city)
+// GET /bookings/by-date?date=YYYY-MM-DD[&cityId=<uuid>]
+router.get("/by-date", async (req, res) => {
+  try {
+    const { date, cityId } = req.query as { date?: string; cityId?: string };
+    if (!date) {
+      return res.status(400).json({ error: "Date parameter is required (YYYY-MM-DD)" });
+    }
+
+    const day = new Date(date);
+    if (isNaN(day.getTime())) {
+      return res.status(400).json({ error: "Invalid date format. Use YYYY-MM-DD" });
+    }
+
+    const startOfDay = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), 0, 0, 0));
+    const endOfDay = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), 23, 59, 59, 999));
+
+    const qb = bookingRepo
+      .createQueryBuilder("booking")
+      .leftJoinAndSelect("booking.stadium", "stadium")
+      .leftJoin("stadium.city", "city")
+      .where("booking.startTime BETWEEN :start AND :end", { start: startOfDay, end: endOfDay });
+
+    if (cityId) {
+      qb.andWhere("city.id = :cityId", { cityId });
+    }
+
+    const bookings = await qb
+      .orderBy("stadium.name", "ASC")
+      .addOrderBy("booking.startTime", "ASC")
+      .getMany();
+
+    return res.json(
+      bookings.map(b => ({
+        stadiumId: b.stadium.id,
+        stadiumName: b.stadium.name,
+        startTime: b.startTime,
+        endTime: b.endTime,
+      }))
+    );
   } catch (err) {
     return res.status(500).json({ error: (err as Error).message });
   }

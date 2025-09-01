@@ -44,7 +44,8 @@
                     'booked': timeslot.isBooked,
                     'available': !timeslot.isBooked
                   }]">
-                    <span class="time">{{ timeslot.startTime }} - {{ timeslot.endTime }}</span>
+                    <span class="time">{{ timeslot.startTimeText }} - {{ timeslot.endTimeText }}</span>
+                    
                     <span :class="['status', timeslot.isBooked ? 'booked' : 'available']">
                       {{ timeslot.isBooked ? '已預約' : '可預約' }}
                     </span>
@@ -52,20 +53,22 @@
                 </div>
               </div>
 
+              <!-- No bookings for this stadium on selected date -->
+              <div v-else-if="selectedDate && stadium.timeslots.length === 0" class="timeslots-section">
+                <p class="no-booking">No bookings yet</p>
+              </div>
+
               <!-- Show message when no date is selected -->
               <div v-if="!selectedDate" class="no-date-selection">
                 <p class="select-date-message">請選擇日期查看時段資訊</p>
-              </div>
-
-              <div v-if="stadium.rules" class="stadium-rules">
-                <h5>球場規則</h5>
-                <p>{{ stadium.rules }}</p>
               </div>
             </div>
           </SwiperSlide>
         </Swiper>
       </div>
     </div>
+    <!-- Pass flattened bookings to timeline component -->
+    <SlotBookedADay :bookings="bookingsOnDate" :stadiums="stadiums" />
     <div>
       <h3>預約空間</h3>
       <CityFilter :cities="cities" :selectedCityId="selectedCityId" @change="changeCity" />
@@ -82,6 +85,7 @@
 import { ref, computed, onMounted } from "vue";
 import CityFilter from './CityFilter.vue';
 import StadiumsList from './StadiumList.vue';
+import SlotBookedADay from "./SlotBookedADay.vue";
 const API_BASE = "http://localhost:3000";
 
 const cities = ref([]);
@@ -95,12 +99,14 @@ const today = new Date();
 today.setHours(0, 0, 0, 0);
 const currentYear = ref(today.getFullYear());
 const currentMonth = ref(today.getMonth());
-const selectedDate = ref(null);
+// Default selected date to today
+const selectedDate = ref(today);
 
 const weekDays = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
 
 const bookedDates = ref([]);
 const stadiums = ref([]);  // Changed from bookedTimes to stadiums
+const bookingsOnDate = ref([]);
 
 const daysInMonth = computed(() => {
   const days = [];
@@ -119,7 +125,7 @@ const daysInMonth = computed(() => {
 function selectDate(date) {
   if (!date) return;
   selectedDate.value = date;
-  fetchStadiumsWithTimeslots();
+  fetchBookingsByDate();
 }
 
 function isToday(date) {
@@ -162,7 +168,7 @@ function changeCity(city) {
   fetchBookedDays();
   fetchStadiumsByCity(); // Fetch stadiums immediately when city changes
   if (selectedDate.value) {
-    fetchStadiumsWithTimeslots();
+    fetchBookingsByDate();
   }
 }
 
@@ -190,12 +196,27 @@ async function fetchStadiumsWithTimeslots() {
       stadiums.value.map(async (stadium) => {
         const bRes = await fetch(`${API_BASE}/bookings/stadium/${stadium.id}?date=${dateStr}`);
         const bookings = bRes.ok ? await bRes.json() : [];
-        const timeslots = bookings.map((b) => ({
-          id: b.id,
-          startTime: new Date(b.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          endTime: new Date(b.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          isBooked: true,
-        }));
+        const timeslots = bookings.map((b) => {
+          const start = new Date(b.startTime);
+          const end = new Date(b.endTime);
+          return {
+            id: `${b.stadiumId}-${start.toISOString()}`,
+            // Keep ISO for computations (timeline) and a local text for display
+            startTimeISO: b.startTime,
+            endTimeISO: b.endTime,
+            startTimeText: start.toLocaleTimeString('zh-TW', {
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false
+            }),
+            endTimeText: end.toLocaleTimeString('zh-TW', {
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false
+            }),
+            isBooked: true,
+          };
+        });
 
         return {
           ...stadium,
@@ -206,13 +227,70 @@ async function fetchStadiumsWithTimeslots() {
     stadiums.value = updatedStadiums;
   } catch (err) {
     console.error("fetchStadiumsWithTimeslots error:", err);
-    // Don't clear stadiums on error, just keep existing data
   }
 }
 
+// Consolidated fetch: all stadium bookings for the selected day (optionally by city)
+async function fetchBookingsByDate() {
+  if (!selectedDate.value || !selectedCityId.value) return;
+  try {
+    const y = selectedDate.value.getFullYear();
+    const m = selectedDate.value.getMonth() + 1;
+    const d = selectedDate.value.getDate();
+    const dateStr = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+    const url = `${API_BASE}/bookings/by-date?date=${dateStr}&cityId=${selectedCityId.value}`;
+    const res = await fetch(url);
+    const bookings = res.ok ? await res.json() : [];
+    bookingsOnDate.value = bookings;
+
+    // Also populate stadium.timeslots for the per-stadium card display
+    const grouped = bookings.reduce((acc, b) => {
+      (acc[b.stadiumId] ||= []).push(b);
+      return acc;
+    }, {});
+
+    stadiums.value = stadiums.value.map((s) => {
+      const list = grouped[s.id] || [];
+      const timeslots = list.map((b) => {
+        const start = new Date(b.startTime);
+        const end = new Date(b.endTime);
+        return {
+          id: `${b.stadiumId}-${start.toISOString()}`,
+          startTimeISO: b.startTime,
+          endTimeISO: b.endTime,
+          startTimeText: start.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }),
+          endTimeText: end.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }),
+          isBooked: true,
+        };
+      });
+      return { ...s, timeslots };
+    });
+  } catch (err) {
+    console.error("fetchBookingsByDate error:", err);
+    bookingsOnDate.value = [];
+  }
+}
+
+// Flatten stadium timeslots into bookings for the timeline component
+const bookingsForSelectedDate = computed(() => {
+  if (!selectedDate.value) return [];
+  return stadiums.value.flatMap(s =>
+    (s.timeslots || []).map(t => ({
+      stadiumId: s.id,
+      stadiumName: s.name,
+      startTime: t.startTimeISO,
+      endTime: t.endTimeISO,
+    }))
+  );
+});
+
 function isBooked(date) {
   if (!date) return false;
-  const dateStr = date.toISOString().split("T")[0];
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  const dateStr = `${y}-${m}-${d}`;
   return bookedDates.value.includes(dateStr);
 }
 
@@ -222,7 +300,6 @@ async function fetchStadiumsByCity() {
     const stadRes = await fetch(`${API_BASE}/stadiums/city/${selectedCityId.value}`);
     const stadList = stadRes.ok ? await stadRes.json() : [];
 
-    // Transform stadium data từ API
     const stadiumsData = stadList.map((s) => ({
       id: s.id,
       name: s.name,
@@ -233,8 +310,8 @@ async function fetchStadiumsByCity() {
       parking: s.parking || "",
       availability: s.availability || "",
       price: s.price || "",
-      city: s.city ? s.city.name : "", // lấy tên city từ object city
-      timeslots: [] // Timeslot sẽ fetch sau
+      city: s.city ? s.city.name : "",
+      timeslots: []
     }));
 
     stadiums.value = stadiumsData;
@@ -252,7 +329,12 @@ async function fetchCities() {
     cities.value = data;
     if (data.length > 0) {
       selectedCityId.value = data[0].id;
-      fetchBookedDays();
+      // Load stadiums and consolidated bookings for the default city/date
+      await fetchStadiumsByCity();
+      await fetchBookedDays();
+      if (selectedDate.value) {
+        await fetchBookingsByDate();
+      }
     }
   } catch (err) {
     console.error("fetchCities error:", err);
@@ -268,6 +350,7 @@ onMounted(() => {
 .booking-container {
   font-family: "Microsoft JhengHei", sans-serif;
   padding: 10px;
+
 }
 
 .city-filter {
@@ -527,6 +610,12 @@ onMounted(() => {
 
 .select-date-message {
   font-size: 0.9rem;
+}
+
+.no-booking {
+  color: #888;
+  font-style: italic;
+  margin: 8px 0 12px;
 }
 
 .stadium-slider {
